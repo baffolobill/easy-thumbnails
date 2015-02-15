@@ -64,8 +64,8 @@ class Thumbnail(Document):
     storage_hash = StringField(max_length=40)
     name = StringField(max_length=255, unique_with=['source', 'storage_hash'])
     modified = DateTimeField(default=timezone.now)
-    width = IntField(null=True)
-    height = IntField(null=True)
+    width = IntField(default=0, required=False)
+    height = IntField(default=0, required=False)
 
     objects = FileManager()
 

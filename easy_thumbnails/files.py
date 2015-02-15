@@ -113,7 +113,7 @@ def database_get_image_dimensions(file, close=False, dimensions=None):
         thumbnail = None
     else:
         if thumbnail.width and thumbnail.height:
-            return thumbnail.width, thumbnail.height
+            return thumbnail.size
 
     dimensions = get_image_dimensions(file, close=close)
     if settings.THUMBNAIL_CACHE_DIMENSIONS and thumbnail:
@@ -271,7 +271,7 @@ class ThumbnailFile(ImageFieldFile):
         Set image dimensions from the cached dimensions of a ``Thumbnail``
         model instance.
         """
-        if thumbnail.width is None or thumbnail.height is None:
+        if not (thumbnail.width and thumbnail.height):
             return False
 
         self._dimensions_cache = thumbnail.size
