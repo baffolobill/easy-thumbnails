@@ -1,3 +1,11 @@
+"""
+TODO:
+1) mongoengine doesn't support access by 'related_name'. So that,
+    it needs to replace 'thumbnails' (used in Thumbnail model)
+    and 'dimensions' on ThumbnailDimensions.
+
+2) Removed model ThumbnailDimensions. Find and fix all side effects.
+"""
 VERSION = (2, 2, 1, 'final', 0)
 
 

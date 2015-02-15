@@ -6,8 +6,11 @@ from optparse import make_option
 
 from django.core.files.storage import get_storage_class
 from django.core.management.base import BaseCommand
+
+from mongoengine import Q
+
 from easy_thumbnails.conf import settings
-from easy_thumbnails.models import Source
+from easy_thumbnails.models import Source, Thumbnail
 
 
 class ThumbnailCollectionCleaner(object):
@@ -34,7 +37,7 @@ class ThumbnailCollectionCleaner(object):
             print(str(e))
 
     def _delete_sources_by_id(self, ids):
-        Source.objects.all().filter(id__in=ids).delete()
+        Source.objects(id__in=ids).delete()
 
     def clean_up(self, dry_run=False, verbosity=1, last_n_days=0,
                  cleanup_path=None, storage=None):
@@ -56,11 +59,12 @@ class ThumbnailCollectionCleaner(object):
         if last_n_days > 0:
             today = date.today()
             query = query.filter(
-                modified__range=(today - timedelta(days=last_n_days), today))
+                Q(modified__gte=(today - timedelta(days=last_n_days))) & Q(modified__lte=today))
+
         if cleanup_path:
             query = query.filter(name__startswith=cleanup_path)
 
-        for source in queryset_iterator(query):
+        for source in query.no_cache():
             self.sources += 1
             abs_source_path = self._get_absolute_path(source.name)
 
@@ -70,7 +74,7 @@ class ThumbnailCollectionCleaner(object):
                 self.source_refs_deleted += 1
                 sources_to_delete.append(source.id)
 
-                for thumb in source.thumbnails.all():
+                for thumb in source.get_thumbnails():
                     self.thumbnails_deleted += 1
                     abs_thumbnail_path = self._get_absolute_path(thumb.name)
 
@@ -100,22 +104,6 @@ class ThumbnailCollectionCleaner(object):
         print("{0:<40} {1:>7}".format("Thumbnails deleted from disk:",
                                     self.thumbnails_deleted))
         print("(Completed in %s seconds)\n" % self.execution_time)
-
-
-def queryset_iterator(queryset, chunksize=1000):
-    """
-    The queryset iterator helps to keep the memory consumption down.
-    And also making it easier to process for weaker computers.
-    """
-
-    primary_key = 0
-    last_pk = queryset.order_by('-pk')[0].pk
-    queryset = queryset.order_by('pk')
-    while primary_key < last_pk:
-        for row in queryset.filter(pk__gt=primary_key)[:chunksize]:
-            primary_key = row.pk
-            yield row
-        gc.collect()
 
 
 class Command(BaseCommand):

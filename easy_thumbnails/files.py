@@ -4,7 +4,9 @@ from django.utils import six
 from django.core.files.base import File, ContentFile
 from django.core.files.storage import (
     default_storage, Storage)
+
 from django.db.models.fields.files import ImageFieldFile, FieldFile
+
 from django.core.files.images import get_image_dimensions
 
 from django.utils.safestring import mark_safe
@@ -105,22 +107,18 @@ def database_get_image_dimensions(file, close=False, dimensions=None):
     dimensions = None
     dimensions_cache = None
     try:
-        thumbnail = models.Thumbnail.objects.select_related('dimensions').get(
+        thumbnail = models.Thumbnail.objects.get(
             storage_hash=storage_hash, name=file.name)
     except models.Thumbnail.DoesNotExist:
         thumbnail = None
     else:
-        try:
-            dimensions_cache = thumbnail.dimensions
-        except models.ThumbnailDimensions.DoesNotExist:
-            dimensions_cache = None
-        if dimensions_cache:
-            return dimensions_cache.width, dimensions_cache.height
+        if thumbnail.width and thumbnail.height:
+            return thumbnail.width, thumbnail.height
+
     dimensions = get_image_dimensions(file, close=close)
     if settings.THUMBNAIL_CACHE_DIMENSIONS and thumbnail:
-        dimensions_cache = models.ThumbnailDimensions(thumbnail=thumbnail)
-        dimensions_cache.width, dimensions_cache.height = dimensions
-        dimensions_cache.save()
+        thumbnail.width, thumbnail.height = dimensions
+        thumbnail.save()
     return dimensions
 
 
@@ -273,13 +271,10 @@ class ThumbnailFile(ImageFieldFile):
         Set image dimensions from the cached dimensions of a ``Thumbnail``
         model instance.
         """
-        try:
-            dimensions = getattr(thumbnail, 'dimensions', None)
-        except models.ThumbnailDimensions.DoesNotExist:
-            dimensions = None
-        if not dimensions:
+        if thumbnail.width is None or thumbnail.height is None:
             return False
-        self._dimensions_cache = dimensions.size
+
+        self._dimensions_cache = thumbnail.size
         return self._dimensions_cache
 
 
@@ -559,15 +554,9 @@ class Thumbnailer(File):
 
         # Cache thumbnail dimensions.
         if settings.THUMBNAIL_CACHE_DIMENSIONS:
-            dimensions_cache, created = (
-                models.ThumbnailDimensions.objects.get_or_create(
-                    thumbnail=thumb_cache,
-                    defaults={'width': thumbnail.width,
-                              'height': thumbnail.height}))
-            if not created:
-                dimensions_cache.width = thumbnail.width
-                dimensions_cache.height = thumbnail.height
-                dimensions_cache.save()
+            thumb_cache.width = thumbnail.width
+            thumb_cache.height = thumbnail.height
+            thumb_cache.save()
 
         signals.thumbnail_created.send(sender=thumbnail)
 
@@ -695,7 +684,7 @@ class ThumbnailerFieldFile(FieldFile, Thumbnailer):
         if source_cache:
             thumbnail_storage_hash = utils.get_storage_hash(
                 self.thumbnail_storage)
-            for thumbnail_cache in source_cache.thumbnails.all():
+            for thumbnail_cache in source_cache.get_thumbnails():
                 # Only attempt to delete the file if it was stored using the
                 # same storage as is currently used.
                 if thumbnail_cache.storage_hash == thumbnail_storage_hash:
@@ -716,7 +705,7 @@ class ThumbnailerFieldFile(FieldFile, Thumbnailer):
         if source_cache:
             thumbnail_storage_hash = utils.get_storage_hash(
                 self.thumbnail_storage)
-            for thumbnail_cache in source_cache.thumbnails.all():
+            for thumbnail_cache in source_cache.get_thumbnails():
                 # Only iterate files which are stored using the current
                 # thumbnail storage.
                 if thumbnail_cache.storage_hash == thumbnail_storage_hash:

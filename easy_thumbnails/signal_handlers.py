@@ -1,4 +1,4 @@
-from django.db.models.fields.files import FileField
+from extras_mongoengine.django_fields import FileField
 
 from easy_thumbnails import signals
 
