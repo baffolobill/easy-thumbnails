@@ -3,31 +3,31 @@ from extras_mongoengine.django_fields import FileField
 from easy_thumbnails import signals
 
 
-def find_uncommitted_filefields(sender, instance, **kwargs):
+def find_uncommitted_filefields(sender, document, **kwargs):
     """
-    A pre_save signal handler which attaches an attribute to the model instance
+    A pre_save signal handler which attaches an attribute to the document instance
     containing all uncommitted ``FileField``s, which can then be used by the
     :func:`signal_committed_filefields` post_save handler.
     """
-    uncommitted = instance._uncommitted_filefields = []
+    uncommitted = document._uncommitted_filefields = []
 
-    fields = sender._meta.fields
+    fields = sender._fields
     if kwargs.get('update_fields', None):
         update_fields = set(kwargs['update_fields'])
         fields = update_fields.intersection(fields)
     for field in fields:
         if isinstance(field, FileField):
-            if not getattr(instance, field.name)._committed:
+            if not getattr(document, field.name)._committed:
                 uncommitted.append(field.name)
 
 
-def signal_committed_filefields(sender, instance, **kwargs):
+def signal_committed_filefields(sender, document, **kwargs):
     """
     A post_save signal handler which sends a signal for each ``FileField`` that
     was committed this save.
     """
-    for field_name in getattr(instance, '_uncommitted_filefields', ()):
-        fieldfile = getattr(instance, field_name)
+    for field_name in getattr(document, '_uncommitted_filefields', ()):
+        fieldfile = getattr(document, field_name)
         # Don't send the signal for deleted files.
         if fieldfile:
             signals.saved_file.send_robust(sender=sender, fieldfile=fieldfile)
