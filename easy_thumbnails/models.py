@@ -15,10 +15,17 @@ class FileQuerySet(QuerySet):
         kwargs.update(dict(storage_hash=utils.get_storage_hash(storage),
                            name=name))
         if create:
+            created = True
+            defaults = kwargs.pop('defaults', {})
             if update_modified:
-                defaults = kwargs.setdefault('defaults', {})
                 defaults['modified'] = update_modified
-            obj, created = self.get_or_create(**kwargs)
+
+            modify_kwargs = dict([('set__{}'.format(k), v) for k,v in kwargs.items()])
+            modify_kwargs.update(
+                dict([('set_on_insert__{}'.format(k), v) for k,v in defaults.items()])
+            )
+
+            obj = self.filter(**kwargs).modify(upsert=True, new=True, **modify_kwargs)
         else:
             created = False
             kwargs.pop('defaults', None)
