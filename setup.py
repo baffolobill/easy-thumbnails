@@ -55,7 +55,6 @@ setup(
     ],
     dependency_links=[
         'https://github.com/baffolobill/extras-mongoengine/tarball/master#egg=extras_mongoengine-dev',
-        'https://github.com/baffolobill/extras-mongoengine.git'
     ],
     cmdclass={'test': DjangoTests},
     classifiers=[
