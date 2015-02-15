@@ -51,10 +51,10 @@ setup(
     install_requires=[
         'django>=1.4.2',
         'pillow',
-        'extras_mongoengine==dev',
+        'extras_mongoengine',
     ],
     dependency_links=[
-        'https://github.com/baffolobill/extras-mongoengine/tarball/master#egg=extras_mongoengine-dev',
+        'https://github.com/baffolobill/extras-mongoengine/tarball/master#egg=extras_mongoengine',
     ],
     cmdclass={'test': DjangoTests},
     classifiers=[
