@@ -46,8 +46,8 @@ class FileManager(models.Manager):
 
 
 class Source(Document):
-    storage_hash = StringField(max_length=40, db_index=True)
-    name = StringField(max_length=255, unique_with='storage_hash', db_index=True)
+    storage_hash = StringField(max_length=40)
+    name = StringField(max_length=255, unique_with='storage_hash')
     modified = DateTimeField(default=timezone.now)
 
     objects = FileManager()
@@ -61,8 +61,8 @@ class Source(Document):
 
 class Thumbnail(Document):
     source = ReferenceField(Source, reverse_delete_rule=CASCADE)
-    storage_hash = StringField(max_length=40, db_index=True)
-    name = StringField(max_length=255, unique_with=['source', 'storage_hash'], db_index=True)
+    storage_hash = StringField(max_length=40)
+    name = StringField(max_length=255, unique_with=['source', 'storage_hash'])
     modified = DateTimeField(default=timezone.now)
     width = IntField(null=True)
     height = IntField(null=True)
