@@ -8,8 +8,7 @@ from mongoengine import *
 from easy_thumbnails import utils, signal_handlers
 from easy_thumbnails.conf import settings
 
-
-class FileManager(models.Manager):
+class FileQuerySet(QuerySet):
 
     def get_file(self, storage, name, create=False, update_modified=None,
                  check_cache_miss=False, **kwargs):
@@ -24,9 +23,8 @@ class FileManager(models.Manager):
             created = False
             kwargs.pop('defaults', None)
             try:
-                manager = self._get_thumbnail_manager()
-                obj = manager.get(**kwargs)
-            except self.model.DoesNotExist:
+                obj = self.get(**kwargs)
+            except DoesNotExist:
 
                 if check_cache_miss and storage.exists(name):
                     # File already in storage, update cache
@@ -41,16 +39,13 @@ class FileManager(models.Manager):
 
         return obj
 
-    def _get_thumbnail_manager(self):
-        return self
-
 
 class Source(Document):
     storage_hash = StringField(max_length=40)
     name = StringField(max_length=255, unique_with='storage_hash')
     modified = DateTimeField(default=timezone.now)
 
-    objects = FileManager()
+    meta = {'queryset_class': FileQuerySet}
 
     def __unicode__(self):
         return self.name
@@ -67,7 +62,7 @@ class Thumbnail(Document):
     width = IntField(default=0, required=False)
     height = IntField(default=0, required=False)
 
-    objects = FileManager()
+    meta = {'queryset_class': FileQuerySet}
 
     def __unicode__(self):
         return "%sx%s" % (self.width, self.height)
